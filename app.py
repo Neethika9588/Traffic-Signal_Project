@@ -34,6 +34,7 @@ def analyze():
     for i in range(1,5):
 
         image = cv2.imread(f"lane{i}.jpg")
+        image = cv2.imread(image_path)
 
         if image is None:
             results[f"lane{i}"] = "Image not found"
