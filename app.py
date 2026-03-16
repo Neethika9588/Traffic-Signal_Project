@@ -62,6 +62,8 @@ def signal_time(vehicle_count):
 
     if vehicle_count == 0:
         return 0
+    elif vehicle_count <= 5:
+        return 8
 
     elif vehicle_count <= 10:
         return 12
