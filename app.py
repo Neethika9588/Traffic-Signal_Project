@@ -5,12 +5,10 @@ import numpy as np
 app = Flask(__name__)
 
 def calculate_density(image):
-
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     edges = cv2.Canny(gray,50,150)
 
     vehicle_pixels = np.sum(edges > 0)
-
     density = vehicle_pixels / image.size
 
     return density
@@ -37,8 +35,11 @@ def analyze():
 
         image = cv2.imread(f"images/lane{i}.jpg")
 
-        density = calculate_density(image)
+        if image is None:
+            results[f"lane{i}"] = "Image not found"
+            continue
 
+        density = calculate_density(image)
         time = signal_time(density)
 
         results[f"lane{i}"] = {
