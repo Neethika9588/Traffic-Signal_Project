@@ -8,60 +8,46 @@ app = Flask(__name__)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
-# -------- Image Processing Pipeline --------
-def process_image(img_path):
+def detect_vehicles(img_path):
 
     if not os.path.exists(img_path):
         return 0
 
-    img = cv2.imread(img_path)
+    image = cv2.imread(img_path)
 
-    if img is None:
+    if image is None:
         return 0
 
-    # Step 1: Resize image
-    img = cv2.resize(img, (800, 600))
+    # Resize for consistent processing
+    image = cv2.resize(image, (800,600))
 
-    # Step 2: Convert to grayscale
-    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
-    # Step 3: Noise removal
-    blur = cv2.GaussianBlur(gray, (7,7), 0)
+    blur = cv2.GaussianBlur(gray,(5,5),0)
 
-    # Step 4: Adaptive threshold
-    thresh = cv2.adaptiveThreshold(
-        blur,
-        255,
-        cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-        cv2.THRESH_BINARY_INV,
-        11,
-        2
-    )
+    edges = cv2.Canny(blur,50,150)
 
-    # Step 5: Morphological operations
-    kernel = np.ones((5,5), np.uint8)
-    dilation = cv2.dilate(thresh, kernel, iterations=2)
+    kernel = np.ones((5,5),np.uint8)
+    closing = cv2.morphologyEx(edges, cv2.MORPH_CLOSE, kernel)
 
-    # Step 6: Find contours
     contours, _ = cv2.findContours(
-        dilation,
+        closing,
         cv2.RETR_EXTERNAL,
         cv2.CHAIN_APPROX_SIMPLE
     )
 
     vehicle_count = 0
 
-    # Step 7: Filter contours by size
     for cnt in contours:
+
         area = cv2.contourArea(cnt)
 
-        if area > 2000:
+        if 500 < area < 50000:
             vehicle_count += 1
 
     return vehicle_count
 
 
-# -------- Signal Timing Rule --------
 def signal_time(vehicle_count):
 
     if vehicle_count == 0:
@@ -80,7 +66,6 @@ def signal_time(vehicle_count):
         return 30
 
 
-# -------- Analyze Lanes --------
 @app.route("/")
 def analyze():
 
@@ -90,7 +75,7 @@ def analyze():
 
         img_path = os.path.join(BASE_DIR, f"lane{i}.jpg")
 
-        vehicles = process_image(img_path)
+        vehicles = detect_vehicles(img_path)
 
         time = signal_time(vehicles)
 
