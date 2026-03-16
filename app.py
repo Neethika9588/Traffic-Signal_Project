@@ -5,48 +5,54 @@ import os
 
 app = Flask(__name__)
 
+# Get project directory
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# -------- Vehicle Counting (approximation using contours) --------
-def count_vehicles(image):
+
+# ---------- Vehicle Detection using Contours ----------
+def detect_vehicles(image):
 
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    blur = cv2.GaussianBlur(gray,(5,5),0)
 
-    edges = cv2.Canny(blur,50,150)
+    blur = cv2.GaussianBlur(gray, (5,5), 0)
 
-    contours, _ = cv2.findContours(edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    edges = cv2.Canny(blur, 50, 150)
+
+    contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
     vehicle_count = 0
 
     for cnt in contours:
+
         area = cv2.contourArea(cnt)
 
-        if area > 500:   # ignore small noise
+        # Ignore small noise
+        if area > 800:
             vehicle_count += 1
 
     return vehicle_count
 
 
-# -------- Signal Timing Logic --------
-def signal_time(vehicle_count):
+# ---------- Signal Timing Rule ----------
+def calculate_signal_time(vehicle_count):
 
     if vehicle_count == 0:
         return 0
 
     elif vehicle_count <= 10:
-        return 12      # 10–15 seconds
+        return 12   # between 10–15 seconds
 
     elif vehicle_count <= 30:
-        return 22      # 20–25 seconds
+        return 22   # between 20–25 seconds
 
     elif vehicle_count > 40:
-        return 38      # 35–40 seconds
+        return 38   # between 35–40 seconds
 
     else:
         return 30
 
 
+# ---------- Analyze Traffic Images ----------
 @app.route("/")
 def analyze():
 
@@ -62,16 +68,17 @@ def analyze():
             results[f"lane{i}"] = "Image not found"
             continue
 
-        vehicles = count_vehicles(image)
+        vehicles = detect_vehicles(image)
 
-        time = signal_time(vehicles)
+        signal_time = calculate_signal_time(vehicles)
 
         results[f"lane{i}"] = {
             "vehicle_count": vehicles,
-            "green_signal_time": time
+            "green_signal_time_seconds": signal_time
         }
 
     return jsonify(results)
 
 
+# Run Flask server
 app.run(host="0.0.0.0", port=10000)
