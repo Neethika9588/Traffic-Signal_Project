@@ -1,6 +1,6 @@
 import firebase_admin
 from firebase_admin import credentials, db
-cred = credentials.Certificate("https://smart-traffic-system-4ffbf-default-rtdb.firebaseio.com/")
+cred = credentials.Certificate("firebase-key.json")
 
 firebase_admin.initialize_app(cred, {
     'databaseURL': 'https://smart-traffic-system-4ffbf-default-rtdb.firebaseio.com'
