@@ -5,12 +5,11 @@ import os
 
 app = Flask(__name__)
 
-# Get project directory
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
-# ---------- Vehicle Detection using Contours ----------
-def detect_vehicles(image):
+# -------- Vehicle Detection --------
+def count_vehicles(image):
 
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
@@ -26,33 +25,31 @@ def detect_vehicles(image):
 
         area = cv2.contourArea(cnt)
 
-        # Ignore small noise
-        if area > 800:
+        if area > 1200:   # filter noise
             vehicle_count += 1
 
     return vehicle_count
 
 
-# ---------- Signal Timing Rule ----------
-def calculate_signal_time(vehicle_count):
+# -------- Signal Timing Rule --------
+def signal_time(vehicle_count):
 
     if vehicle_count == 0:
         return 0
 
     elif vehicle_count <= 10:
-        return 12   # between 10–15 seconds
+        return 12
 
     elif vehicle_count <= 30:
-        return 22   # between 20–25 seconds
+        return 22
 
     elif vehicle_count > 40:
-        return 38   # between 35–40 seconds
+        return 38
 
     else:
         return 30
 
 
-# ---------- Analyze Traffic Images ----------
 @app.route("/")
 def analyze():
 
@@ -68,17 +65,16 @@ def analyze():
             results[f"lane{i}"] = "Image not found"
             continue
 
-        vehicles = detect_vehicles(image)
+        vehicles = count_vehicles(image)
 
-        signal_time = calculate_signal_time(vehicles)
+        time = signal_time(vehicles)
 
         results[f"lane{i}"] = {
             "vehicle_count": vehicles,
-            "green_signal_time_seconds": signal_time
+            "green_signal_time": time
         }
 
     return jsonify(results)
 
 
-# Run Flask server
 app.run(host="0.0.0.0", port=10000)
