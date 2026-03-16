@@ -1,29 +1,50 @@
 from flask import Flask, jsonify
 import cv2
 import numpy as np
+import os
 
 app = Flask(__name__)
 
-def calculate_density(image):
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# -------- Vehicle Counting (approximation using contours) --------
+def count_vehicles(image):
+
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    edges = cv2.Canny(gray,50,150)
+    blur = cv2.GaussianBlur(gray,(5,5),0)
 
-    vehicle_pixels = np.sum(edges > 0)
-    density = vehicle_pixels / image.size
+    edges = cv2.Canny(blur,50,150)
 
-    return density
+    contours, _ = cv2.findContours(edges, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+    vehicle_count = 0
+
+    for cnt in contours:
+        area = cv2.contourArea(cnt)
+
+        if area > 500:   # ignore small noise
+            vehicle_count += 1
+
+    return vehicle_count
 
 
-def signal_time(density):
+# -------- Signal Timing Logic --------
+def signal_time(vehicle_count):
 
-    if density < 0.02:
-        return 10
-    elif density < 0.05:
-        return 20
-    elif density < 0.08:
-        return 30
+    if vehicle_count == 0:
+        return 0
+
+    elif vehicle_count <= 10:
+        return 12      # 10–15 seconds
+
+    elif vehicle_count <= 30:
+        return 22      # 20–25 seconds
+
+    elif vehicle_count > 40:
+        return 38      # 35–40 seconds
+
     else:
-        return 40
+        return 30
 
 
 @app.route("/")
@@ -33,18 +54,20 @@ def analyze():
 
     for i in range(1,5):
 
-        image = cv2.imread(f"lane{i}.jpg")
+        image_path = os.path.join(BASE_DIR, f"lane{i}.jpg")
+
         image = cv2.imread(image_path)
 
         if image is None:
             results[f"lane{i}"] = "Image not found"
             continue
 
-        density = calculate_density(image)
-        time = signal_time(density)
+        vehicles = count_vehicles(image)
+
+        time = signal_time(vehicles)
 
         results[f"lane{i}"] = {
-            "density": float(density),
+            "vehicle_count": vehicles,
             "green_signal_time": time
         }
 
