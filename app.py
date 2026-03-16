@@ -8,28 +8,36 @@ app = Flask(__name__)
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
+# -------- Vehicle Detection using Image Processing --------
 def detect_vehicles(img_path):
 
+    # Check file exists
     if not os.path.exists(img_path):
         return 0
 
+    # Read image
     image = cv2.imread(img_path)
 
     if image is None:
         return 0
 
-    # Resize for consistent processing
+    # Step 1: Resize image
     image = cv2.resize(image, (800,600))
 
+    # Step 2: Convert to grayscale
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
+    # Step 3: Remove noise
     blur = cv2.GaussianBlur(gray,(5,5),0)
 
+    # Step 4: Edge detection
     edges = cv2.Canny(blur,50,150)
 
+    # Step 5: Morphological closing to connect vehicle edges
     kernel = np.ones((5,5),np.uint8)
     closing = cv2.morphologyEx(edges, cv2.MORPH_CLOSE, kernel)
 
+    # Step 6: Find contours
     contours, _ = cv2.findContours(
         closing,
         cv2.RETR_EXTERNAL,
@@ -38,6 +46,7 @@ def detect_vehicles(img_path):
 
     vehicle_count = 0
 
+    # Step 7: Filter contours by size
     for cnt in contours:
 
         area = cv2.contourArea(cnt)
@@ -48,6 +57,7 @@ def detect_vehicles(img_path):
     return vehicle_count
 
 
+# -------- Traffic Signal Timing Rule --------
 def signal_time(vehicle_count):
 
     if vehicle_count == 0:
@@ -66,6 +76,7 @@ def signal_time(vehicle_count):
         return 30
 
 
+# -------- Analyze All 4 Lanes --------
 @app.route("/")
 def analyze():
 
@@ -87,4 +98,5 @@ def analyze():
     return jsonify(results)
 
 
+# -------- Run Flask Server --------
 app.run(host="0.0.0.0", port=10000)
