@@ -1,3 +1,10 @@
+import firebase_admin
+from firebase_admin import credentials, db
+cred = credentials.Certificate("firebase-key.json")
+
+firebase_admin.initialize_app(cred, {
+    'databaseURL': 'https://smart-traffic-system-4ffbf-default-rtdb.firebaseio.com'
+})
 from flask import Flask, jsonify
 import cv2
 import numpy as np
@@ -94,6 +101,8 @@ def analyze():
             "vehicle_count": vehicles,
             "green_signal_time": time
         }
+    ref = db.reference("traffic_data")
+    ref.set(results)
 
     return jsonify(results)
 
